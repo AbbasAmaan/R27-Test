@@ -1,80 +1,118 @@
 # R27 Test
 
-<p align="center">
-  <img src="https://github.com/teamrudra/r26_test/blob/main/misc/rover.webp" width="480" height="480"/>
+## Task 0: Forking
 
-#### Some Instructions
-1. You may use any online resources, datasheets, or documentation needed, but be mindful of your time and stay focused on the task.
-2. The duration of the test is 90 mins from 5:15pm to 6:45 pm.
-3. There will be a MCQ test conducted [here](https://rudra-test.vercel.app/)
-4. There are 5 tasks in the tests. Complete all of them.
-5. In case you are not able to complete all the tasks, do upload whatever you are able to.
-6. In the `README.md` of your repository include your thought process, places where you got stuck, where you used the help of AI, google or other online resources.
-7. Even if you are not able to solve anything, do fill the README and what your thought process would have been.
-8. Carefully read the instructions to implement the required functionality.
-9. Install a c compiler and [git](https://git-scm.com/downloads) if you haven't already done it.
-10. After finishing your test, provide the link to your forked repository in the google form provided at the end.
+I forked the given repository and made the required changes in my fork. The repository is public for evaluation.
 
-### Aim/Objective: To build a communication system that safely transfers, processes and decodes messages between threads and uses the received coordinates to control a rover. 
+---
 
-## Description
-This test evaluates your ability to understand, debug, and implement functionality in an existing C-based embedded/robotics code-base. The test has five tasks. You are given an existing code-base with partially implemented functionality. Your task is to understand the code, identify the issues, implement the required changes, and verify your solution.
+## Task 1: Encoding and Decoding
 
-### Task 0: Fork the provided repository and ensure it is set to PUBLIC so we can access and assess your work.
-### Task 1: Implement encoding and decoding functions for embedded communication.
-Fixed incorrect logic in the encoder and decoder, handled buffer limits and edge-case inputs, and verify that decoding returns the original data.
-### Task 2: Manage multi-threading and synchronization using POSIX threads.
-Review and correct the existing implementation of mutexes, semaphores, and message queues while maintaining the core architecture.
-### Task 3: Control a differential-drive rover to navigate to a target.
-Complete the drive-to-target functionality to calculate direction, generate appropriate left/right wheel velocities, and handle heading wraparound.
-### Task 4: Compile and run the code.
-Verify the workflow on the provided rover simulator and ensure the project compiles successfully.
+### Understanding
 
-#### Code
-1. [src/main.c](src/main.c): Code for running the multi-threading and synchronization architecture.
-2. [src/en_dc.c](src/en_dc.c): Rectify errors in this code to correctly encode/decode data and handle invalid inputs.
-3. [lib/en_dc.h](lib/en_dc.h): Header file containing declarations for the encoding and decoding logic.
-4. [src/queue.c](src/queue.c): Correct the existing message queue implementation.
-5. [src/mutex.c](src/mutex.c): Review and fix POSIX mutex and semaphore logic.
-6. [src/drive.c](src/drive.c): Complete the defined `drive_to_target()` function to guide the rover.
-7. [lib/drive.h](lib/drive.h): Header file containing parameters and declarations for rover control.
+The `en_dc.c` file contains the encoding and decoding functions used for communication. The existing implementation had incomplete logic, especially around pointers, buffer sizes and COBS encoding.
 
-## Build the project:
+### Changes Made
 
-(make sure you are in the root directory)
+I implemented/fixed:
 
-```
-cmake -S . -B build
-```
+- COBS encoding in `frame_encode()`
+- COBS decoding in `frame_decode()`
+- NULL pointer checks
+- Output buffer overflow checks
+- Invalid input checks
+- Handling of zero bytes
+- COBS blocks reaching `0xFF`
 
-```
-cmake --build build --verbose
-```
+I also made sure that the decoded data matches the original input.
 
-```
-./build/queue_test
-```
+---
 
-To clean the build:
+## Task 2: Multithreading and Synchronization
 
-```
-rm -rf build
-```
+### Understanding
 
-# Solution
-## Understanding
-Describe what you understood about the problem.
+The project uses pthreads, mutexes, semaphores and a message queue for communication between the producer and consumer threads.
 
-## Thought Process
-After understanding the problem, describe how you decided to proceed towards solving the question. Also document any use of external resources or AI tools. 
+### Changes Made
 
-## Implementation
-How did you decide to implement your solution.
+In `queue.c` I fixed the message queue initialization, including the queue counters, mutex and semaphores.
 
-**Good luck!**
-# Google Form
-https://forms.gle/A8CaByv4ohfrCmmWA
+In `mutex.c` I fixed the reader entry logic so that the first reader locks the shared resource while allowing multiple readers to enter at the same time.
 
-<p align="center">
-  <img src="https://github.com/teamrudra/r25-test/blob/main/datasheets/feynman-simple.jpg" width="600" height="600"/>
-</p>
+In `main.c` I initialized the required mutex and condition variable properly and kept the existing producer/consumer structure.
+
+---
+
+## Task 3: Rover Control
+
+### Understanding
+
+The rover uses differential drive, so the left and right wheel velocities can be changed independently to control its direction.
+
+### Changes Made
+
+I completed `drive_to_target()` in `drive.c`.
+
+The function now:
+
+- Checks for invalid pointers and values
+- Calculates the direction towards the target
+- Calculates the heading error
+- Handles heading wraparound
+- Calculates suitable left and right wheel velocities
+- Uses the existing rover control functions
+
+I kept the existing structure of the project instead of changing the overall design.
+
+---
+
+## Task 4: Compile and Run
+
+I built and tested the project using the provided build setup.
+
+The generated test executable was:
+
+```text
+build/queue_test.exe
+
+
+I ran it using:
+./build/queue_test.exe
+
+The provided four inputs were tested and all of them returned:
+Success
+
+I also ran:
+git diff --check
+
+and no whitespace errors were reported.
+
+
+
+
+
+SOLUTION:
+---------------------------------------------------------------------------------------------
+
+Understanding-
+
+The main goal of the test was to fix the incomplete parts of an existing C robotics project rather than write a new project from scratch.
+
+I first went through the source files and the headers to understand how the different parts were connected. I then worked on the communication code, threading/synchronization and rover control separately.
+---------------------------------------------------------------------------------------------
+
+Thought Process-
+
+For the encoder/decoder, I focused on understanding how COBS works and then checked the buffer boundaries and special cases.
+
+For the threading part, I followed the existing producer-consumer design and fixed the synchronization instead of redesigning it.
+
+For the rover part, I used the existing rover state and wheel-control functions and implemented the missing calculations in drive_to_target().
+
+After making the changes, I ran the provided test executable and checked the Git diff for errors.
+---------------------------------------------------------------------------------------------
+
+AI / Online Help-
+
+I used AI occasionally to understand parts of the existing code and to help debug build/test issues. The implementation was then tested locally using the provided project.

@@ -8,6 +8,7 @@
 
 #include <math.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 #define PI_F 3.14159265358979323846f
 
@@ -75,12 +76,84 @@ static bool apply_wheel_velocities(struct rover_state *rover,
  * and may be called from your solution. Path planning and PID are not required.
  */
 enum drive_status drive_to_target(struct rover_state *rover,
-                                  const struct coordinate *target) {
-  (void)rover;
-  (void)target;
+                                  const struct coordinate *target)
+{
+    if (rover == NULL || target == NULL) {
+        return DRIVE_INVALID_INPUT;
+    }
 
-  /* TODO: Implement the differential-drive controller. */
-  return DRIVE_INVALID_INPUT;
+    if (!isfinite(rover->position.latitude) ||
+        !isfinite(rover->position.longitude) ||
+        !isfinite(rover->position.altitude) ||
+        !isfinite(rover->heading_rad) ||
+        !isfinite(target->latitude) ||
+        !isfinite(target->longitude) ||
+        !isfinite(target->altitude)) {
+        return DRIVE_INVALID_INPUT;
+    }
+
+    for (int step = 0; step < MAX_DRIVE_STEPS; step++) {
+
+        float dx = target->longitude - rover->position.longitude;
+        float dy = target->latitude - rover->position.latitude;
+
+        float distance = hypotf(dx, dy);
+
+        if (distance <= TARGET_TOLERANCE) {
+            return DRIVE_REACHED_TARGET;
+        }
+
+        float target_heading = atan2f(dy, dx);
+        float heading_error =
+            normalize_angle(target_heading - rover->heading_rad);
+
+        float angular_velocity = HEADING_GAIN * heading_error;
+
+        if (angular_velocity > MAX_ANGULAR_VELOCITY) {
+            angular_velocity = MAX_ANGULAR_VELOCITY;
+        }
+
+        if (angular_velocity < -MAX_ANGULAR_VELOCITY) {
+            angular_velocity = -MAX_ANGULAR_VELOCITY;
+        }
+
+        float linear_velocity = distance;
+
+        if (linear_velocity > MAX_LINEAR_VELOCITY) {
+            linear_velocity = MAX_LINEAR_VELOCITY;
+        }
+
+        /*
+         * Reduce forward speed when the rover is facing
+         * away from the target.
+         */
+        if (fabsf(heading_error) > PI_F / 2.0f) {
+            linear_velocity = 0.0f;
+        } else {
+            linear_velocity *= cosf(heading_error);
+        }
+
+        float left_wheel =
+            (linear_velocity -
+             (angular_velocity * WHEEL_SEPARATION / 2.0f))
+            / WHEEL_RADIUS;
+
+        float right_wheel =
+            (linear_velocity +
+             (angular_velocity * WHEEL_SEPARATION / 2.0f))
+            / WHEEL_RADIUS;
+
+        struct wheel_velocity velocity = {
+            .left = left_wheel,
+            .right = right_wheel
+        };
+
+        if (!apply_wheel_velocities(rover, velocity)) {
+            return DRIVE_INVALID_COMMAND;
+        }
+    }
+
+    return DRIVE_MAX_STEPS_EXCEEDED;
 }
 
 static float normalize_angle(float angle) {
